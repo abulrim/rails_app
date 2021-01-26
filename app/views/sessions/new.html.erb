@@ -1,0 +1,30 @@
+<h1>Login</h1>
+
+<%= form_for(:session, url: login_path) do |form| %>
+  <% if alert.present? %>
+    <div id="error_explanation">
+      <h2><%= alert %></h2>
+    </div>
+  <% end %>
+
+  <div class="field">
+    <%= form.label :email %>
+    <%= form.email_field :email %>
+  </div>
+
+  <div class="field">
+    <%= form.label :password %>
+    <%= form.password_field :password %>
+  </div>
+
+  <div class="field">
+    <%= form.label :remember_me do %>
+      <%= form.check_box :remember_me %>
+      <span>Remember me on this computer</span>
+    <% end %>
+  </div>
+
+  <div class="actions">
+    <%= form.submit "Log in" %>
+  </div>
+<% end %>
