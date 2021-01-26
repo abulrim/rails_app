@@ -28,6 +28,9 @@ commands:
             echo 'export BUNDLER_VERSION=$(cat Gemfile.lock | tail -1 | tr -d " ")' >> $BASH_ENV
             source $BASH_ENV
             gem install bundler
+      - run:
+          name: Install bundle
+          command: bundle install
 
 jobs:
   build:
@@ -42,16 +45,17 @@ jobs:
             - yarn-cache-v1-
       - configure_bundler
       - run:
-          name: Install bundle
-          command: bundle install
-      - run:
           name: Wait for DB
           command: dockerize -wait tcp://127.0.0.1:5432 -timeout 1m
       - run:
           name: Setup DB
           command: bundle exec rails db:create db:schema:load --trace
-      - run: yarn install --cache-folder ~/.cache/yarn
-      - run: bundle exec rake webpacker:compile
+      - run: 
+          name: Install Yarn Packages
+          command: yarn install --cache-folder ~/.cache/yarn
+      - run: 
+          name: Compile webpacker
+          command: bundle exec rake webpacker:compile
       - save_cache:
           key: rails_app-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
           paths:
@@ -64,6 +68,12 @@ jobs:
           root: ~/
           paths:
             - ./rails_app
+  tests:
+    executor: default
+    steps:
+      - attach_workspace:
+          at: ~/
+      - configure_bundler
       - run:
           name: Run Tests
           command: bundle exec rake
@@ -77,12 +87,14 @@ jobs:
           name: Rubocop
           command: bundle exec rubocop
 
-
 workflows:
   version: 2
   integration:
     jobs:
       - build
+      - tests:
+          requires:
+            - build
       - rubocop:
           requires:
             - build
