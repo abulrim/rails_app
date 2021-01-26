@@ -1,0 +1,82 @@
+---
+version: 2.1
+
+executors:
+  default:
+    working_directory: ~/rails_app
+    docker:
+      - image: circleci/ruby:2.7.1
+        environment:
+          BUNDLE_JOBS: 3
+          BUNDLE_PATH: vendor/bundle
+          BUNDLE_RETRY: 3
+          BUNDLER_VERSION: 2.0.1
+          RAILS_ENV: test
+          DB_HOST: 127.0.0.1
+          PG_HOST: 127.0.0.1
+          PGUSER: rails_app_user
+      - image: circleci/postgres:9.6
+        environment:
+          POSTGRES_DB: rails_app_test
+          POSTGRES_USER: rails_app_user
+
+commands:
+  configure_bundler:
+    description: Configure bundler
+    steps:
+      - run:
+          name: Configure bundler
+          command: |
+            echo 'export BUNDLER_VERSION=$(cat Gemfile.lock | tail -1 | tr -d " ")' >> $BASH_ENV
+            source $BASH_ENV
+            gem install bundler
+
+jobs:
+  build:
+    executor: default
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - rails_app-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
+            - rails_app-
+      - configure_bundler
+      - run:
+          name: Install bundle
+          command: bundle install
+      - run:
+          name: Wait for DB
+          command: dockerize -wait tcp://127.0.0.1:5432 -timeout 1m
+      - run:
+          name: Setup DB
+          command: bundle exec rails db:create db:schema:load --trace
+      - save_cache:
+          key: rails_app-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
+          paths:
+            - vendor/bundle
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - ./rails_app
+      - run:
+          name: Run Tests
+          command: bundle exec rake
+  rubocop:
+    executor: default
+    steps:
+      - attach_workspace:
+          at: ~/
+      - configure_bundler
+      - run:
+          name: Rubocop
+          command: bundle exec rubocop
+
+
+workflows:
+  version: 2
+  integration:
+    jobs:
+      - build
+      - rubocop:
+          requires:
+            - build
