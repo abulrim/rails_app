@@ -1,6 +1,9 @@
 ---
 version: 2.1
 
+orbs:
+  heroku: circleci/heroku@1.2.4
+
 references:
   bundle_cache_key: &bundle_cache_key
     rails_app-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
@@ -81,9 +84,14 @@ jobs:
       - run:
           name: Running Rubocop lints
           command: bundle exec rubocop
-
 workflows:
   version: 2
   integration:
     jobs:
       - build
+      - heroku/deploy-via-git: 
+          requires:
+            - build
+          filters:
+            branches:
+              only: master
