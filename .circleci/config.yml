@@ -19,6 +19,7 @@ executors:
         environment:
           POSTGRES_DB: rails_app_test
           POSTGRES_USER: rails_app_user
+          POSTGRES_PASSWORD: ""
 
 commands:
   configure_bundler:
