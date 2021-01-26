@@ -7,16 +7,6 @@ references:
 
   yarn_cache_key: &yarn_cache_key
     yarn-cache-v1-{{ checksum "yarn.lock" }}
-
-  restore_yarn_packages: &restore_yarn_packages
-    restore_cache:
-      keys:
-        - *yarn_cache_key
-
-  restore_bundle_cache: &restore_bundle_cache
-    restore_cache:
-      keys:
-        - *bundle_cache_key
         
 executors:
   default:
@@ -51,59 +41,45 @@ jobs:
     executor: default
     steps:
       - checkout
-      - *restore_bundle_cache
-      - *restore_yarn_packages
+      - restore_cache:
+          name: Restoring bundle cache
+          keys:
+            - *yarn_cache_key
+      - restore_cache:
+          name: Restoring bundle cache
+          keys:
+            - *yarn_cache_key
       - configure_bundler
       - run:
-          name: Install bundle
+          name: Installing bundle
           command: bundle install
       - run:
-          name: Wait for DB
+          name: Waiting for DB
           command: dockerize -wait tcp://127.0.0.1:5432 -timeout 1m
       - run:
-          name: Setup DB
+          name: Setting up database
           command: bundle exec rails db:create db:schema:load --trace
       - run: 
-          name: Install Yarn Packages
+          name: Installing Yarn Packages
           command: yarn install --cache-folder ~/.cache/yarn
       - run: 
-          name: Compile webpacker
+          name: Compiling webpacker
           command: bundle exec rake webpacker:compile
       - save_cache:
-          name: Save Bundle Cache
+          name: Saving Bundle Cache
           key: *bundle_cache_key
           paths:
             - vendor/bundle
       - save_cache:
-          name: Save Yarn Package Cache
+          name: Saving Yarn Package Cache
           key: *yarn_cache_key
           paths:
             - ./node_modules
-      - persist_to_workspace:
-          root: ~/
-          paths:
-            - ./rails_app
-  tests:
-    executor: default
-    steps:
-      - attach_workspace:
-          at: ~/
-      - *restore_bundle_cache
-      - *restore_yarn_packages
-      - configure_bundler
       - run:
-          name: Run Tests
+          name: Running rails Tests
           command: bundle exec rake
-  rubocop:
-    executor: default
-    steps:
-      - attach_workspace:
-          at: ~/
-      - *restore_bundle_cache
-      - *restore_yarn_packages
-      - configure_bundler
       - run:
-          name: Rubocop
+          name: Running Rubocop lints
           command: bundle exec rubocop
 
 workflows:
@@ -111,9 +87,3 @@ workflows:
   integration:
     jobs:
       - build
-      - tests:
-          requires:
-            - build
-      - rubocop:
-          requires:
-            - build
