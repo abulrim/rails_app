@@ -15,6 +15,7 @@ executors:
           POSTGRES_USER: rails_app
           POSTGRES_DB: rails_app_test
           POSTGRES_PASSWORD: ""
+          POSTGRES_HOST_AUTH_METHOD: trust
 
 commands:
   configure_bundler:
