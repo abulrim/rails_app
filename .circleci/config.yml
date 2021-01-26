@@ -57,9 +57,9 @@ jobs:
           paths:
             - vendor/bundle
       - save_cache:
-        key: yarn-cache-v1-{{ checksum "yarn.lock" }}
-        paths:
-          - ~/.cache/yarn
+          key: yarn-cache-v1-{{ checksum "yarn.lock" }}
+          paths:
+            - ~/.cache/yarn
       - persist_to_workspace:
           root: ~/
           paths:
